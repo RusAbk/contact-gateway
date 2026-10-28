@@ -169,8 +169,8 @@ app.post('/api/admin/whatsapp/lookup', async (request, reply) => {
     const avatar = await whatsapp.recipientAvatarDataUrl(target.jid);
     return { found: true, name: target.name, number: target.number, avatar };
   } catch (error) {
-    app.log.error({ err: error }, 'WhatsApp recipient lookup failed');
-    return reply.code(502).send({ error: 'No se pudo buscar el contacto en WhatsApp. Inténtalo de nuevo.' });
+    app.log.error({ err: error, firstError: error instanceof AggregateError ? error.errors[0] : undefined, secondError: error instanceof AggregateError ? error.errors[1] : undefined }, 'WhatsApp recipient lookup failed');
+    return reply.code(502).send({ error: recipient.type === 'qr' ? 'No se pudo resolver este QR con WhatsApp. Inténtalo de nuevo o usa el número.' : 'No se pudo buscar el contacto en WhatsApp. Inténtalo de nuevo.' });
   }
 });
 app.post('/api/admin/whatsapp/send', async (request, reply) => {

@@ -46,9 +46,25 @@ test('resolves a personal WhatsApp QR link before sending', async () => {
   const recipient = parseRecipientQuery('https://wa.me/qr/ABCD123456');
   assert.deepEqual(await manager.sendToRecipient(recipient, 'Hola Ana'), { jid: '123456789@lid', name: 'Ana', number: null });
   assert.equal(calls[0].attrs.xmlns, 'w:qr');
-  assert.equal(calls[0].attrs.to, 's.whatsapp.net');
+  assert.equal(calls[0].attrs.to, undefined);
   assert.deepEqual(calls[0].content[0], { tag: 'qr', attrs: { code: 'ABCD123456' } });
   assert.deepEqual(calls[1], ['send', '123456789@lid', { text: 'Hola Ana' }]);
+});
+
+test('retries a contact QR with a server address if WhatsApp rejects the first query', async () => {
+  const queries = [];
+  const manager = new WhatsAppManager('/unused');
+  manager.state = 'connected';
+  manager.socket = {
+    query: async (node) => {
+      queries.push(node);
+      if (queries.length === 1) throw Object.assign(new Error('Rejected'), { output: { statusCode: 400 } });
+      return { tag: 'iq', attrs: {}, content: [{ tag: 'qr', attrs: { jid: '123456789@s.whatsapp.net', notify: 'Ana' } }] };
+    },
+  };
+  assert.equal((await manager.resolveRecipient(parseRecipientQuery('https://wa.me/qr/ABCD123456'))).name, 'Ana');
+  assert.equal(queries[0].attrs.to, undefined);
+  assert.equal(queries[1].attrs.to, 's.whatsapp.net');
 });
 
 test('search result uses a known contact name and a private avatar preview', async () => {

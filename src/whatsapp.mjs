@@ -131,12 +131,20 @@ export class WhatsAppManager {
       const result = await socket.onWhatsApp(recipient.value);
       jid = result?.find((item) => item.exists)?.jid;
     } else {
+      const qrQuery = (to) => socket.query({ tag: 'iq', attrs: { ...(to ? { to } : {}), type: 'get', xmlns: 'w:qr' }, content: [{ tag: 'qr', attrs: { code: recipient.value } }] }, 8_000);
       let result;
-      try {
-        result = await socket.query({ tag: 'iq', attrs: { to: 's.whatsapp.net', type: 'get', xmlns: 'w:qr' }, content: [{ tag: 'qr', attrs: { code: recipient.value } }] }, 12_000);
-      } catch (error) {
-        if (error?.output?.statusCode === 404) return null;
-        throw error;
+      let firstError;
+      try { result = await qrQuery(null); if (!result) throw new Error('Empty WhatsApp QR response'); }
+      catch (error) { firstError = error; }
+      if (firstError) {
+        const status = Number(firstError?.data ?? firstError?.output?.statusCode);
+        if (status === 404) return null;
+        if (socket !== this.socket || this.state !== 'connected') throw firstError;
+        try { result = await qrQuery('s.whatsapp.net'); }
+        catch (error) {
+          if (Number(error?.data ?? error?.output?.statusCode) === 404) return null;
+          throw new AggregateError([firstError, error], 'WhatsApp QR lookup failed');
+        }
       }
       const qr = getBinaryNodeChild(result, 'qr');
       jid = qr?.attrs?.jid;
