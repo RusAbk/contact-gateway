@@ -1,0 +1,30 @@
+name: contact-gateway
+services:
+  app:
+    image: ${IMAGE:?required}
+    restart: unless-stopped
+    user: "1000:1000"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=32m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    env_file: .env
+    ports:
+      - "127.0.0.1:${LOCAL_PORT:-38080}:8080"
+    volumes:
+      - ./data:/data
+    networks:
+      edge:
+        aliases: [contact-gateway]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8080/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+networks:
+  edge:
+    external: true
+    name: ${CADDY_NETWORK:?required}

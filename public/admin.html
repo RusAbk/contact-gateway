@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f7f4ef">
+  <title>Администрирование контактов</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script defer src="/admin.js"></script>
+</head>
+<body>
+  <main class="shell admin-shell">
+    <header class="admin-header"><a href="/" class="back-link">← На страницу контактов</a><button id="logout-button" class="text-button hidden" type="button">Выйти</button></header>
+    <div class="hero"><p class="eyebrow">Панель администратора</p><h1>Новые<br><em>контакты.</em></h1><p class="intro">Подключите WhatsApp, проверьте входящие чаты и отправьте выбранный контакт в Telegram.</p></div>
+    <section class="card" id="login-panel" aria-labelledby="login-title"><h2 id="login-title">Вход</h2><form id="login-form"><label for="password">Пароль администратора</label><input id="password" type="password" autocomplete="current-password" required><button class="primary-button" type="submit">Войти <span>→</span></button><p class="message" id="login-message" role="alert"></p></form></section>
+    <div id="admin-content" class="hidden">
+      <section class="card detail" aria-labelledby="connection-title"><div class="card-header"><div><p class="step">01 / Подключение</p><h2 id="connection-title">WhatsApp Web</h2></div><span id="wa-status" class="status-pill">Проверяем…</span></div><p id="connection-note" class="detail-copy"></p><div id="pairing-panel" class="hidden"><div class="qr-frame"><img id="pairing-qr" width="320" height="320" alt="QR-код для привязки WhatsApp Web"></div><p class="hint">В WhatsApp откройте «Связанные устройства» → «Привязать устройство» и сканируйте этот код.</p></div><div class="toolbar"><button id="reconnect-button" class="secondary-button" type="button">Обновить подключение</button><button id="wa-logout-button" class="text-button" type="button">Отвязать аккаунт</button></div></section>
+      <section class="card detail" aria-labelledby="public-qr-title"><p class="step">02 / Публичный QR</p><h2 id="public-qr-title">Как вам напишут</h2><p class="detail-copy">Этот QR-код видят посетители, когда выбирают WhatsApp.</p><div id="public-qr-panel" class="hidden"><div class="qr-frame"><img id="public-qr" width="300" height="300" alt="QR-код вашего WhatsApp"></div><p class="hint" id="public-number"></p></div><p id="public-qr-empty" class="message">Подключите WhatsApp, чтобы показать QR-код.</p><form id="number-form" class="inline-form"><label for="public-number-input">Номер для ссылки WhatsApp, если он не определился автоматически</label><div class="inline-controls"><input id="public-number-input" type="tel" inputmode="tel" placeholder="Например, 79991234567"><button type="submit" class="secondary-button">Сохранить</button></div></form><p id="number-message" class="message" role="status"></p></section>
+      <section class="card detail" aria-labelledby="chats-title"><div class="card-header"><div><p class="step">03 / Входящие</p><h2 id="chats-title">Последние чаты</h2></div><span class="count-pill" id="chats-count">0</span></div><p class="detail-copy">Список строится из синхронизации и новых сообщений WhatsApp. Для отправки доступен только чат с входящим сообщением.</p><button id="check-chats" class="primary-button" type="button">Проверить чаты <span>↻</span></button><p id="chats-message" class="message" role="status"></p><div id="chats-list" class="chats-list"></div></section>
+    </div>
+    <dialog id="send-dialog" class="confirm-dialog"><form method="dialog"><h2>Отправить контакт?</h2><p id="send-summary"></p><div class="dialog-actions"><button value="cancel" class="secondary-button">Отмена</button><button id="confirm-send" value="confirm" class="primary-button">Отправить в Telegram</button></div></form></dialog>
+  </main>
+</body>
+</html>
