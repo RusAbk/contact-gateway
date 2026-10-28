@@ -16,17 +16,17 @@ async function showWhatsApp() {
   const unavailable = document.getElementById('whatsapp-unavailable');
   ready.classList.add('hidden');
   unavailable.classList.remove('hidden');
-  unavailable.textContent = 'Проверяем подключение WhatsApp…';
+  unavailable.textContent = 'Comprobando la conexión de WhatsApp…';
   try {
     const response = await fetch('/api/whatsapp', { cache: 'no-store' });
     const result = await response.json();
-    if (!result.available) { unavailable.textContent = 'Сейчас WhatsApp недоступен. Выберите email или телефон.'; return; }
+    if (!result.available) { unavailable.textContent = 'WhatsApp no está disponible ahora. Elige correo electrónico o teléfono.'; return; }
     document.getElementById('whatsapp-qr').src = result.qr;
     document.getElementById('whatsapp-link').href = result.url;
     document.getElementById('whatsapp-number').textContent = `WhatsApp: +${result.number}`;
     unavailable.classList.add('hidden');
     ready.classList.remove('hidden');
-  } catch { unavailable.textContent = 'Не удалось загрузить QR-код. Попробуйте позже.'; }
+  } catch { unavailable.textContent = 'No se pudo cargar el código QR. Inténtalo más tarde.'; }
 }
 
 for (const button of choices) button.addEventListener('click', () => {
@@ -41,9 +41,9 @@ for (const button of choices) button.addEventListener('click', () => {
     valueInput.type = email ? 'email' : 'tel';
     valueInput.autocomplete = email ? 'email' : 'tel';
     valueInput.inputMode = email ? 'email' : 'tel';
-    valueInput.placeholder = email ? 'you@example.com' : '+7 999 123 45 67';
-    document.getElementById('contact-label').firstChild.textContent = email ? 'Email ' : 'Телефон ';
-    document.getElementById('form-title').textContent = email ? 'Ваш email' : 'Ваш телефон';
+    valueInput.placeholder = email ? 'tu@ejemplo.com' : '+34 600 123 456';
+    document.getElementById('contact-label').firstChild.textContent = email ? 'Correo electrónico ' : 'Teléfono ';
+    document.getElementById('form-title').textContent = email ? 'Tu correo electrónico' : 'Tu teléfono';
     valueInput.value = '';
     valueInput.focus();
   }
@@ -54,12 +54,12 @@ form.addEventListener('submit', async (event) => {
   if (!selected || selected === 'whatsapp') return;
   const submit = document.getElementById('submit-lead');
   submit.disabled = true;
-  showMessage('Отправляем…');
+  showMessage('Enviando…');
   try {
     const response = await fetch('/api/leads', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ method: selected, value: valueInput.value, name: document.getElementById('contact-name').value, company: document.getElementById('contact-company').value, website: document.getElementById('website').value }) });
-    if (!response.ok) { const result = await response.json().catch(() => null); throw new Error(result?.error ?? 'Не удалось отправить контакт.'); }
+    if (!response.ok) { const result = await response.json().catch(() => null); throw new Error(result?.error ?? 'No se pudieron enviar tus datos.'); }
     form.reset();
-    showMessage('Спасибо! Мы получили ваш контакт и скоро свяжемся с вами.', 'success');
+    showMessage('¡Gracias! Hemos recibido tus datos y pronto nos pondremos en contacto contigo.', 'success');
   } catch (error) { showMessage(error.message, 'error'); }
   finally { submit.disabled = false; }
 });

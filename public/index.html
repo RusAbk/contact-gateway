@@ -1,43 +1,43 @@
 <!doctype html>
-<html lang="ru">
+<html lang="es">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#f7f4ef">
-  <title>Оставить контакт</title>
+  <title>Deja tus datos de contacto</title>
   <link rel="stylesheet" href="/styles.css">
   <script defer src="/app.js"></script>
 </head>
 <body>
   <main class="shell">
-    <div class="hero-mark"><span class="mark-dot"></span> На связи</div>
-    <div class="hero"><p class="eyebrow">Давайте познакомимся</p><h1>Как с вами<br><em>связаться?</em></h1><p class="intro">Выберите удобный способ. Мы получим ваш контакт и ответим лично.</p></div>
+    <div class="hero-mark"><span class="mark-dot"></span> En contacto</div>
+    <div class="hero"><p class="eyebrow">Hablemos</p><h1>¿Cómo podemos<br><em>contactarte?</em></h1><p class="intro">Elige la forma que prefieras. Recibiremos tus datos y te responderemos personalmente.</p></div>
     <section class="card" aria-labelledby="choice-title">
-      <h2 id="choice-title" class="section-title">Выберите способ связи</h2>
-      <div class="choices" role="group" aria-label="Способ связи">
-        <button type="button" class="choice" data-method="email" aria-pressed="false"><span class="choice-icon">✉</span><span><strong>Электронная почта</strong><small>Напишем вам на email</small></span><span class="choice-arrow">↗</span></button>
-        <button type="button" class="choice" data-method="phone" aria-pressed="false"><span class="choice-icon">☎</span><span><strong>Телефон</strong><small>Позвоним или напишем</small></span><span class="choice-arrow">↗</span></button>
-        <button type="button" class="choice" data-method="whatsapp" aria-pressed="false"><span class="choice-icon wa">◉</span><span><strong>WhatsApp</strong><small>Начните разговор сами</small></span><span class="choice-arrow">↗</span></button>
+      <h2 id="choice-title" class="section-title">Elige cómo quieres que te contactemos</h2>
+      <div class="choices" role="group" aria-label="Forma de contacto">
+        <button type="button" class="choice" data-method="email" aria-pressed="false"><span class="choice-icon">✉</span><span><strong>Correo electrónico</strong><small>Te escribiremos por correo</small></span><span class="choice-arrow">↗</span></button>
+        <button type="button" class="choice" data-method="phone" aria-pressed="false"><span class="choice-icon">☎</span><span><strong>Teléfono</strong><small>Te llamaremos o escribiremos</small></span><span class="choice-arrow">↗</span></button>
+        <button type="button" class="choice" data-method="whatsapp" aria-pressed="false"><span class="choice-icon wa">◉</span><span><strong>WhatsApp</strong><small>Inicia la conversación</small></span><span class="choice-arrow">↗</span></button>
       </div>
     </section>
     <section class="card detail hidden" id="form-panel" aria-labelledby="form-title">
-      <p class="step">01 / Контакт</p><h2 id="form-title">Ваш контакт</h2>
+      <p class="step">01 / Contacto</p><h2 id="form-title">Tus datos de contacto</h2>
       <form id="lead-form">
-        <label for="contact-value" id="contact-label">Контакт <span class="required">*</span></label>
-        <input id="contact-value" name="value" required autocomplete="email" inputmode="email" placeholder="you@example.com">
-        <div class="two-fields"><div><label for="contact-name">Как к вам обращаться <span class="optional">необязательно</span></label><input id="contact-name" name="name" autocomplete="name" maxlength="100" placeholder="Имя"></div><div><label for="contact-company">Компания <span class="optional">необязательно</span></label><input id="contact-company" name="company" autocomplete="organization" maxlength="120" placeholder="Название компании"></div></div>
-        <div class="trap" aria-hidden="true"><label for="website">Сайт</label><input id="website" name="website" tabindex="-1" autocomplete="off"></div>
-        <button class="primary-button" type="submit" id="submit-lead">Отправить контакт <span>→</span></button>
+        <label for="contact-value" id="contact-label">Contacto <span class="required">*</span></label>
+        <input id="contact-value" name="value" required autocomplete="email" inputmode="email" placeholder="tu@ejemplo.com">
+        <div class="two-fields"><div><label for="contact-name">¿Cómo te llamas? <span class="optional">opcional</span></label><input id="contact-name" name="name" autocomplete="name" maxlength="100" placeholder="Nombre"></div><div><label for="contact-company">Empresa <span class="optional">opcional</span></label><input id="contact-company" name="company" autocomplete="organization" maxlength="120" placeholder="Nombre de la empresa"></div></div>
+        <div class="trap" aria-hidden="true"><label for="website">Sitio web</label><input id="website" name="website" tabindex="-1" autocomplete="off"></div>
+        <button class="primary-button" type="submit" id="submit-lead">Enviar mis datos <span>→</span></button>
         <p id="form-message" class="message" role="status" aria-live="polite"></p>
       </form>
     </section>
     <section class="card detail hidden" id="whatsapp-panel" aria-labelledby="whatsapp-title">
-      <p class="step">01 / WhatsApp</p><h2 id="whatsapp-title">Напишите нам</h2>
-      <p class="detail-copy">Отсканируйте QR-код телефоном и отправьте сообщение — так мы увидим ваш чат.</p>
-      <div id="whatsapp-ready" class="hidden"><div class="qr-frame"><img id="whatsapp-qr" alt="QR-код для начала чата в WhatsApp" width="300" height="300"></div><a id="whatsapp-link" class="primary-button" target="_blank" rel="noopener noreferrer">Открыть WhatsApp <span>↗</span></a><p class="hint" id="whatsapp-number"></p></div>
-      <p id="whatsapp-unavailable" class="message" role="status">Проверяем подключение WhatsApp…</p>
+      <p class="step">01 / WhatsApp</p><h2 id="whatsapp-title">Escríbenos</h2>
+      <p class="detail-copy">Escanea el código QR con tu teléfono y envíanos un mensaje para que podamos ver tu chat.</p>
+      <div id="whatsapp-ready" class="hidden"><div class="qr-frame"><img id="whatsapp-qr" alt="Código QR para iniciar un chat de WhatsApp" width="300" height="300"></div><a id="whatsapp-link" class="primary-button" target="_blank" rel="noopener noreferrer">Abrir WhatsApp <span>↗</span></a><p class="hint" id="whatsapp-number"></p></div>
+      <p id="whatsapp-unavailable" class="message" role="status">Comprobando la conexión de WhatsApp…</p>
     </section>
-    <footer class="footer"><span>Ваши данные нужны только для ответа.</span><a href="/admin">Администратор</a></footer>
+    <footer class="footer"><span>Usaremos tus datos solo para responderte.</span><a href="/admin">Administración</a></footer>
   </main>
 </body>
 </html>

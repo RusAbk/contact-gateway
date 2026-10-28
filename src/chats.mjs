@@ -33,13 +33,13 @@ function previewMessage(message) {
   }
   const value = content?.conversation ?? content?.extendedTextMessage?.text ?? content?.imageMessage?.caption ?? content?.videoMessage?.caption;
   if (typeof value === 'string' && value.trim()) return value.replace(/[\u0000-\u001f\u007f]/g, ' ').trim().replace(/\s+/g, ' ').slice(0, 220);
-  if (content?.imageMessage) return 'Фото';
-  if (content?.videoMessage) return 'Видео';
-  if (content?.audioMessage) return 'Голосовое сообщение';
-  if (content?.documentMessage) return `Файл: ${String(content.documentMessage.fileName ?? 'документ').slice(0, 120)}`;
-  if (content?.stickerMessage) return 'Стикер';
-  if (content?.contactMessage || content?.contactsArrayMessage) return 'Контакт';
-  if (content?.locationMessage || content?.liveLocationMessage) return 'Геолокация';
+  if (content?.imageMessage) return 'Foto';
+  if (content?.videoMessage) return 'Vídeo';
+  if (content?.audioMessage) return 'Mensaje de voz';
+  if (content?.documentMessage) return `Archivo: ${String(content.documentMessage.fileName ?? 'documento').slice(0, 120)}`;
+  if (content?.stickerMessage) return 'Pegatina';
+  if (content?.contactMessage || content?.contactsArrayMessage) return 'Contacto';
+  if (content?.locationMessage || content?.liveLocationMessage) return 'Ubicación';
   return null;
 }
 
@@ -135,7 +135,7 @@ export class ChatIndex {
     return [...this.chats.values()].filter((chat) => chat.lastIncomingAt > 0).sort((a, b) => b.lastAt - a.lastAt).slice(0, limit).map((chat) => {
       const jid = this.canonical(chat.id);
       const number = phoneFromJid(jid);
-      return { id: jid, name: this.contacts.get(jid)?.name ?? (number ? `+${number}` : 'Контакт WhatsApp'), number, preview: chat.preview, lastAt: chat.lastAt, lastIncomingAt: chat.lastIncomingAt, lastIncomingPreview: chat.lastIncomingPreview, sent: this.sent.has(`${jid}:${chat.lastIncomingId}`) };
+      return { id: jid, name: this.contacts.get(jid)?.name ?? (number ? `+${number}` : 'Contacto de WhatsApp'), number, preview: chat.preview, lastAt: chat.lastAt, lastIncomingAt: chat.lastIncomingAt, lastIncomingPreview: chat.lastIncomingPreview, sent: this.sent.has(`${jid}:${chat.lastIncomingId}`) };
     });
   }
 

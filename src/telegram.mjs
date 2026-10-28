@@ -18,13 +18,13 @@ export class TelegramNotifier {
   }
 
   async lead(method, value, name, company) {
-    const heading = method === 'email' ? 'Новый контакт: email' : 'Новый контакт: телефон';
-    const lines = [heading, value, name ? `Имя: ${name}` : null, company ? `Компания: ${company}` : null].filter(Boolean);
+    const heading = method === 'email' ? 'Nuevo contacto: correo electrónico' : 'Nuevo contacto: teléfono';
+    const lines = [heading, value, name ? `Nombre: ${name}` : null, company ? `Empresa: ${company}` : null].filter(Boolean);
     return this.text(lines.join('\n'));
   }
 
   async whatsappContact(chat, avatar) {
-    const lines = ['Новый контакт: WhatsApp', `Имя: ${chat.name}`, chat.number ? `Телефон: +${chat.number}` : `WhatsApp ID: ${chat.id}`, `Последнее входящее: ${chat.lastIncomingPreview}`, `Время: ${new Date(chat.lastIncomingAt).toLocaleString('ru-RU', { timeZone: 'UTC' })} UTC`];
+    const lines = ['Nuevo contacto: WhatsApp', `Nombre: ${chat.name}`, chat.number ? `Teléfono: +${chat.number}` : `ID de WhatsApp: ${chat.id}`, `Último mensaje recibido: ${chat.lastIncomingPreview}`, `Fecha: ${new Date(chat.lastIncomingAt).toLocaleString('es-ES', { timeZone: 'UTC' })} UTC`];
     const text = lines.join('\n').slice(0, 1000);
     if (avatar) {
       const form = new FormData();

@@ -42,7 +42,7 @@ function limited(key, max, windowMs) {
 }
 
 function checkOrigin(request, reply) {
-  if (request.headers.origin !== config.origin) { reply.code(403).send({ error: 'Недопустимый источник запроса.' }); return false; }
+  if (request.headers.origin !== config.origin) { reply.code(403).send({ error: 'Origen de la solicitud no permitido.' }); return false; }
   return true;
 }
 
@@ -72,7 +72,7 @@ function authenticated(token) {
 }
 
 function requireAdmin(request, reply) {
-  if (!authenticated(request.cookies.cg_session)) { reply.code(401).send({ error: 'Войдите в админку.' }); return false; }
+  if (!authenticated(request.cookies.cg_session)) { reply.code(401).send({ error: 'Inicia sesión en el panel de administración.' }); return false; }
   return true;
 }
 
@@ -97,19 +97,19 @@ app.get('/api/whatsapp', async () => whatsapp.publicLink());
 
 app.post('/api/leads', async (request, reply) => {
   if (!checkOrigin(request, reply)) return;
-  if (limited(`lead:${request.ip}`, 5, 60 * 60_000)) return reply.code(429).send({ error: 'Слишком много запросов. Попробуйте позже.' });
+  if (limited(`lead:${request.ip}`, 5, 60 * 60_000)) return reply.code(429).send({ error: 'Demasiadas solicitudes. Inténtalo más tarde.' });
   if (request.body?.website) return reply.code(204).send();
   const lead = validateLead(request.body);
-  if (!lead) return reply.code(422).send({ error: 'Проверьте контактные данные.' });
+  if (!lead) return reply.code(422).send({ error: 'Revisa tus datos de contacto.' });
   try { await telegram.lead(lead.method, lead.value, lead.name, lead.company); }
-  catch (error) { app.log.error({ error }, 'Failed to notify Telegram'); return reply.code(502).send({ error: 'Не удалось отправить контакт. Попробуйте снова.' }); }
+  catch (error) { app.log.error({ err: error }, 'Failed to notify Telegram'); return reply.code(502).send({ error: 'No se pudieron enviar tus datos. Inténtalo de nuevo más tarde.' }); }
   return reply.code(204).send();
 });
 
 app.post('/api/admin/login', async (request, reply) => {
   if (!checkOrigin(request, reply)) return;
-  if (limited(`login:${request.ip}`, 8, 15 * 60_000)) return reply.code(429).send({ error: 'Слишком много попыток входа.' });
-  if (!verifyPassword(request.body?.password)) return reply.code(401).send({ error: 'Неверный пароль.' });
+  if (limited(`login:${request.ip}`, 8, 15 * 60_000)) return reply.code(429).send({ error: 'Demasiados intentos de inicio de sesión.' });
+  if (!verifyPassword(request.body?.password)) return reply.code(401).send({ error: 'Contraseña incorrecta.' });
   reply.setCookie('cg_session', sessionToken(), { path: '/api/admin', httpOnly: true, secure: config.secure, sameSite: 'strict', maxAge: 12 * 60 * 60 });
   return { ok: true };
 });
@@ -134,7 +134,7 @@ app.post('/api/admin/whatsapp/logout', async (request, reply) => {
 app.post('/api/admin/number', async (request, reply) => {
   if (!checkOrigin(request, reply) || !requireAdmin(request, reply)) return;
   const number = String(request.body?.number ?? '').replace(/[+\s()-]/g, '');
-  if (!/^\d{7,15}$/.test(number)) return reply.code(422).send({ error: 'Введите номер в международном формате.' });
+  if (!/^\d{7,15}$/.test(number)) return reply.code(422).send({ error: 'Introduce el número en formato internacional.' });
   await whatsapp.setPublicNumber(number);
   return { ok: true };
 });
@@ -142,15 +142,15 @@ app.get('/api/admin/chats', async (request, reply) => requireAdmin(request, repl
 app.get('/api/admin/avatar/:jid', async (request, reply) => {
   if (!requireAdmin(request, reply)) return;
   const avatar = await whatsapp.avatarBytes(request.params.jid).catch(() => null);
-  if (!avatar) return reply.code(404).send({ error: 'Аватар недоступен.' });
+  if (!avatar) return reply.code(404).send({ error: 'La foto de perfil no está disponible.' });
   return reply.type(avatar.contentType).send(avatar.bytes);
 });
 app.post('/api/admin/chats/:jid/send', async (request, reply) => {
   if (!checkOrigin(request, reply) || !requireAdmin(request, reply)) return;
-  if (request.body?.confirmation !== 'SEND_WHATSAPP_CONTACT') return reply.code(422).send({ error: 'Подтвердите отправку контакта.' });
+  if (request.body?.confirmation !== 'SEND_WHATSAPP_CONTACT') return reply.code(422).send({ error: 'Confirma el envío del contacto.' });
   const chat = whatsapp.selectedChat(request.params.jid);
-  if (!chat) return reply.code(404).send({ error: 'Чат с входящим сообщением не найден.' });
-  if (chat.sent || sending.has(chat.incomingKey)) return reply.code(409).send({ error: 'Этот контакт уже отправляется или отправлен.' });
+  if (!chat) return reply.code(404).send({ error: 'No se encontró un chat con mensajes recibidos.' });
+  if (chat.sent || sending.has(chat.incomingKey)) return reply.code(409).send({ error: 'Este contacto ya se está enviando o ya se envió.' });
   sending.add(chat.incomingKey);
   try {
     const avatar = await whatsapp.avatarBytes(chat.id).catch(() => null);
@@ -158,15 +158,15 @@ app.post('/api/admin/chats/:jid/send', async (request, reply) => {
     whatsapp.markSent(chat.incomingKey);
     return { ok: true, avatarSent: result.avatarSent };
   } catch (error) {
-    app.log.error({ error }, 'Failed to notify Telegram');
-    return reply.code(502).send({ error: 'Не удалось отправить контакт. Попробуйте снова.' });
+    app.log.error({ err: error }, 'Failed to notify Telegram');
+    return reply.code(502).send({ error: 'No se pudo enviar el contacto. Inténtalo de nuevo más tarde.' });
   } finally { sending.delete(chat.incomingKey); }
 });
 
 app.setErrorHandler((error, _request, reply) => {
-  app.log.error({ error }, 'Request failed');
-  reply.code(500).send({ error: 'Ошибка сервера. Попробуйте позже.' });
+  app.log.error({ err: error }, 'Request failed');
+  reply.code(500).send({ error: 'Error del servidor. Inténtalo más tarde.' });
 });
 
-await whatsapp.init().catch((error) => { app.log.error({ error }, 'WhatsApp startup failed; reconnect from the admin panel'); });
+await whatsapp.init().catch((error) => { app.log.error({ err: error }, 'WhatsApp startup failed; reconnect from the admin panel'); });
 await app.listen({ host: '0.0.0.0', port: config.port });

@@ -25,7 +25,7 @@ test('uses message alternate number and rejects low quality names', () => {
   index.acceptMessage({ key: { remoteJid: '98765@lid', remoteJidAlt: '79991234567@s.whatsapp.net', id: 'a', fromMe: false }, messageTimestamp: 100, pushName: '79991234567', message: { imageMessage: {} } });
   assert.equal(index.list()[0].id, '79991234567@s.whatsapp.net');
   assert.equal(index.list()[0].name, '+79991234567');
-  assert.equal(index.list()[0].preview, 'Фото');
+  assert.equal(index.list()[0].preview, 'Foto');
   assert.equal(usableName('You'), null);
   assert.equal(usableName('12345@lid'), null);
 });
