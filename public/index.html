@@ -9,19 +9,16 @@
   <script defer src="/app.js"></script>
 </head>
 <body>
-  <main class="shell">
-    <div class="hero-mark"><span class="mark-dot"></span> En contacto</div>
-    <div class="hero"><p class="eyebrow">Hablemos</p><h1>¿Cómo podemos<br><em>contactarte?</em></h1><p class="intro">Elige la forma que prefieras. Recibiremos tus datos y te responderemos personalmente.</p></div>
-    <section class="card" aria-labelledby="choice-title">
-      <h2 id="choice-title" class="section-title">Elige cómo quieres que te contactemos</h2>
+  <main class="shell contact-shell">
+    <header class="compact-header"><h1>Hablemos</h1><p>Elige cómo prefieres contactar.</p></header>
+    <section class="card choice-card" aria-label="Forma de contacto">
       <div class="choices" role="group" aria-label="Forma de contacto">
-        <button type="button" class="choice" data-method="email" aria-pressed="false"><span class="choice-icon">✉</span><span><strong>Correo electrónico</strong><small>Te escribiremos por correo</small></span><span class="choice-arrow">↗</span></button>
-        <button type="button" class="choice" data-method="phone" aria-pressed="false"><span class="choice-icon">☎</span><span><strong>Teléfono</strong><small>Te llamaremos o escribiremos</small></span><span class="choice-arrow">↗</span></button>
-        <button type="button" class="choice" data-method="whatsapp" aria-pressed="false"><span class="choice-icon wa">◉</span><span><strong>WhatsApp</strong><small>Inicia la conversación</small></span><span class="choice-arrow">↗</span></button>
+        <button type="button" class="choice" data-method="email" aria-pressed="false"><span class="choice-icon">✉</span><strong>Correo electrónico</strong><span class="choice-arrow">↗</span></button>
+        <button type="button" class="choice" data-method="phone" aria-pressed="false"><span class="choice-icon">☎</span><strong>Teléfono</strong><span class="choice-arrow">↗</span></button>
+        <button type="button" class="choice" data-method="whatsapp" aria-pressed="false"><span class="choice-icon wa">◉</span><strong>WhatsApp</strong><span class="choice-arrow">↗</span></button>
       </div>
     </section>
-    <section class="card detail hidden" id="form-panel" aria-labelledby="form-title">
-      <p class="step">01 / Contacto</p><h2 id="form-title">Tus datos de contacto</h2>
+    <section class="card detail hidden" id="form-panel" aria-label="Datos de contacto">
       <form id="lead-form">
         <label for="contact-value" id="contact-label">Contacto <span class="required">*</span></label>
         <input id="contact-value" name="value" required autocomplete="email" inputmode="email" placeholder="tu@ejemplo.com">
@@ -31,12 +28,43 @@
         <p id="form-message" class="message" role="status" aria-live="polite"></p>
       </form>
     </section>
-    <section class="card detail hidden" id="whatsapp-panel" aria-labelledby="whatsapp-title">
-      <p class="step">01 / WhatsApp</p><h2 id="whatsapp-title">Escríbenos</h2>
-      <p class="detail-copy">Escanea el código QR con tu teléfono y envíanos un mensaje para que podamos ver tu chat.</p>
+    <section class="card detail hidden" id="whatsapp-panel" aria-label="WhatsApp">
+      <p class="detail-copy">Escanea el QR y envíanos un mensaje.</p>
       <div id="whatsapp-ready" class="hidden"><div class="qr-frame"><img id="whatsapp-qr" alt="Código QR para iniciar un chat de WhatsApp" width="300" height="300"></div><a id="whatsapp-link" class="primary-button" target="_blank" rel="noopener noreferrer">Abrir WhatsApp <span>↗</span></a><p class="hint" id="whatsapp-number"></p></div>
       <p id="whatsapp-unavailable" class="message" role="status">Comprobando la conexión de WhatsApp…</p>
+      <div class="chat-access">
+        <div id="private-header" class="chat-access-header"><strong>Área privada</strong></div>
+        <p id="chat-auth-status" class="message" role="status">Comprobando acceso…</p>
+        <form id="chat-login-form" class="hidden">
+          <label for="chat-password">Contraseña de administración</label>
+          <div class="inline-controls"><input id="chat-password" type="password" autocomplete="current-password" required><button class="secondary-button" type="submit">Entrar</button></div>
+          <p id="chat-login-message" class="message" role="alert"></p>
+        </form>
+        <div id="chat-content" class="hidden">
+          <div class="outbound">
+            <strong>Escribir primero</strong>
+            <form id="recipient-form">
+              <label for="recipient-input">Número internacional o enlace de WhatsApp</label>
+              <div class="inline-controls"><input id="recipient-input" type="text" inputmode="tel" autocomplete="off" maxlength="512" placeholder="+34 600 123 456" required><button class="secondary-button" type="submit">Buscar</button></div>
+            </form>
+            <div class="qr-actions"><button id="scan-qr" class="text-button" type="button">Escanear QR</button><button id="upload-qr" class="text-button" type="button">Subir imagen QR</button><input id="qr-file" class="hidden" type="file" accept="image/*"></div>
+            <div id="qr-camera-panel" class="hidden"><video id="qr-video" playsinline muted></video><button id="stop-qr" class="text-button" type="button">Cerrar cámara</button></div>
+            <p id="recipient-message" class="message" role="status"></p>
+            <form id="outbound-form" class="hidden">
+              <p id="recipient-preview" class="recipient-preview"></p>
+              <label for="outbound-text">Mensaje</label><textarea id="outbound-text" rows="3" maxlength="2000" required placeholder="Escribe tu mensaje..."></textarea>
+              <button class="primary-button" type="submit">Enviar por WhatsApp <span>→</span></button>
+              <p id="outbound-message" class="message" role="status"></p>
+            </form>
+          </div>
+          <div class="chat-access-header"><strong>Chats recibidos</strong><span id="chats-count" class="count-pill">0</span></div>
+          <button id="check-chats" class="secondary-button" type="button">Actualizar chats ↻</button>
+          <p id="chats-message" class="message" role="status"></p>
+          <div id="chats-list" class="chats-list"></div>
+        </div>
+      </div>
     </section>
+    <dialog id="send-dialog" class="confirm-dialog"><form method="dialog"><h2>¿Enviar este contacto?</h2><p id="send-summary"></p><div class="dialog-actions"><button value="cancel" class="secondary-button">Cancelar</button><button value="confirm" class="primary-button">Enviar a Telegram</button></div></form></dialog>
     <footer class="footer"><span>Usaremos tus datos solo para responderte.</span><a href="/admin">Administración</a></footer>
   </main>
 </body>

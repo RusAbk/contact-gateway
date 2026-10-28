@@ -1,7 +1,7 @@
 import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
-import makeWASocket, { DisconnectReason, useMultiFileAuthState } from '@whiskeysockets/baileys';
+import makeWASocket, { DisconnectReason, getBinaryNodeChild, useMultiFileAuthState } from '@whiskeysockets/baileys';
 import pino from 'pino';
 import QRCode from 'qrcode';
 import { ChatIndex, normalizeJid, phoneFromJid } from './chats.mjs';
@@ -120,6 +120,41 @@ export class WhatsAppManager {
 
   async pairingStatus() {
     return { state: this.state, pairingQr: this.qr, number: this.publicNumber, connectedAs: this.socket?.user?.name ?? null };
+  }
+
+  async resolveRecipient(recipient) {
+    const socket = this.socket;
+    if (this.state !== 'connected' || !socket) throw new Error('WhatsApp is not connected');
+    let jid;
+    let name = null;
+    if (recipient.type === 'phone') {
+      const result = await socket.onWhatsApp(recipient.value);
+      jid = result?.find((item) => item.exists)?.jid;
+    } else {
+      let result;
+      try {
+        result = await socket.query({ tag: 'iq', attrs: { type: 'get', xmlns: 'w:qr' }, content: [{ tag: 'qr', attrs: { code: recipient.value } }] }, 12_000);
+      } catch (error) {
+        if (error?.output?.statusCode === 404) return null;
+        throw error;
+      }
+      const qr = getBinaryNodeChild(result, 'qr');
+      jid = qr?.attrs?.jid;
+      name = typeof qr?.attrs?.notify === 'string' ? qr.attrs.notify.slice(0, 100) : null;
+    }
+    jid = normalizeJid(jid);
+    if (!/^\d+@(s\.whatsapp\.net|lid)$/.test(jid)) return null;
+    if (socket !== this.socket || this.state !== 'connected') throw new Error('WhatsApp disconnected during recipient lookup');
+    return { jid, name, number: phoneFromJid(jid) ?? (recipient.type === 'phone' ? recipient.value : null) };
+  }
+
+  async sendToRecipient(recipient, text) {
+    const socket = this.socket;
+    const target = await this.resolveRecipient(recipient);
+    if (!target) return null;
+    if (this.state !== 'connected' || !socket || socket !== this.socket) throw new Error('WhatsApp disconnected before sending');
+    await socket.sendMessage(target.jid, { text });
+    return target;
   }
 
   async recentChats() {

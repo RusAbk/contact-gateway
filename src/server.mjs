@@ -6,6 +6,7 @@ import Fastify from 'fastify';
 import cookie from '@fastify/cookie';
 import { TelegramNotifier, validateLead } from './telegram.mjs';
 import { WhatsAppManager } from './whatsapp.mjs';
+import { parseRecipientQuery, validateOutboundText } from './recipient.mjs';
 
 const base = dirname(fileURLToPath(import.meta.url));
 const staticDir = join(base, '..', 'public');
@@ -80,7 +81,7 @@ app.addHook('onRequest', async (_request, reply) => {
   reply.header('X-Content-Type-Options', 'nosniff');
   reply.header('Referrer-Policy', 'no-referrer');
   reply.header('X-Frame-Options', 'DENY');
-  reply.header('Content-Security-Policy', "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
+  reply.header('Content-Security-Policy', "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self' blob:; worker-src 'self' blob:; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
   reply.header('Cache-Control', 'no-store');
 });
 
@@ -92,6 +93,7 @@ const staticFiles = {
   '/admin.js': ['admin.js', 'text/javascript; charset=utf-8'],
 };
 for (const [path, [name, type]] of Object.entries(staticFiles)) app.get(path, async (_request, reply) => reply.type(type).send(createReadStream(join(staticDir, name))));
+for (const name of ['qr-scanner.min.js', 'qr-scanner-worker.min.js']) app.get(`/${name}`, async (_request, reply) => reply.type('text/javascript; charset=utf-8').send(createReadStream(join(base, '..', 'node_modules', 'qr-scanner', name))));
 app.get('/health', async () => ({ ok: true }));
 app.get('/api/whatsapp', async () => whatsapp.publicLink());
 
@@ -137,6 +139,36 @@ app.post('/api/admin/number', async (request, reply) => {
   if (!/^\d{7,15}$/.test(number)) return reply.code(422).send({ error: 'Introduce el número en formato internacional.' });
   await whatsapp.setPublicNumber(number);
   return { ok: true };
+});
+app.post('/api/admin/whatsapp/lookup', async (request, reply) => {
+  if (!checkOrigin(request, reply) || !requireAdmin(request, reply)) return;
+  const recipient = parseRecipientQuery(request.body?.recipient);
+  if (!recipient) return reply.code(422).send({ error: 'Introduce un número internacional o escanea un QR de WhatsApp válido.' });
+  if (limited(`lookup:${request.ip}`, 30, 60 * 60_000)) return reply.code(429).send({ error: 'Demasiadas búsquedas. Inténtalo más tarde.' });
+  if (whatsapp.state !== 'connected') return reply.code(503).send({ error: 'Conecta WhatsApp antes de buscar contactos.' });
+  try {
+    const target = await whatsapp.resolveRecipient(recipient);
+    return target ? { found: true, name: target.name, number: target.number } : { found: false };
+  } catch (error) {
+    app.log.error({ err: error }, 'WhatsApp recipient lookup failed');
+    return reply.code(502).send({ error: 'No se pudo buscar el contacto en WhatsApp. Inténtalo de nuevo.' });
+  }
+});
+app.post('/api/admin/whatsapp/send', async (request, reply) => {
+  if (!checkOrigin(request, reply) || !requireAdmin(request, reply)) return;
+  const recipient = parseRecipientQuery(request.body?.recipient);
+  const text = validateOutboundText(request.body?.text);
+  if (!recipient || !text) return reply.code(422).send({ error: 'Revisa el destinatario y el mensaje.' });
+  if (limited(`send:${request.ip}`, 10, 60 * 60_000)) return reply.code(429).send({ error: 'Demasiados mensajes. Inténtalo más tarde.' });
+  if (whatsapp.state !== 'connected') return reply.code(503).send({ error: 'Conecta WhatsApp antes de enviar mensajes.' });
+  try {
+    const target = await whatsapp.sendToRecipient(recipient, text);
+    if (!target) return reply.code(404).send({ error: 'No se encontró este contacto en WhatsApp.' });
+    return { ok: true, number: target.number, name: target.name };
+  } catch (error) {
+    app.log.error({ err: error }, 'WhatsApp outbound message failed');
+    return reply.code(502).send({ error: 'No se pudo enviar el mensaje por WhatsApp. Inténtalo de nuevo.' });
+  }
 });
 app.get('/api/admin/chats', async (request, reply) => requireAdmin(request, reply) ? { chats: await whatsapp.recentChats() } : undefined);
 app.get('/api/admin/avatar/:jid', async (request, reply) => {
