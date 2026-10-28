@@ -17,6 +17,10 @@ export class TelegramNotifier {
     return this.call('sendMessage', JSON.stringify({ chat_id: this.chatId, text: message, disable_web_page_preview: true }));
   }
 
+  async verifyChat() {
+    return this.call('getChat', JSON.stringify({ chat_id: this.chatId }));
+  }
+
   async lead(method, value, name, company) {
     const heading = method === 'email' ? 'Nuevo contacto: correo electrónico' : 'Nuevo contacto: teléfono';
     const lines = [heading, value, name ? `Nombre: ${name}` : null, company ? `Empresa: ${company}` : null].filter(Boolean);

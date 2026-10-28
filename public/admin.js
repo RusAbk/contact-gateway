@@ -23,6 +23,7 @@ function setLoggedIn(value) {
   loginPanel.classList.toggle('hidden', value);
   adminContent.classList.toggle('hidden', !value);
   logoutButton.classList.toggle('hidden', !value);
+  if (!value) { document.getElementById('telegram-token').value = ''; document.getElementById('telegram-chat-id').value = ''; }
 }
 
 async function updateStatus() {
@@ -49,13 +50,23 @@ async function updatePublicQr() {
   if (result.available) { document.getElementById('public-qr').src = result.qr; document.getElementById('public-number').textContent = `+${result.number}`; }
 }
 
+async function loadTelegramSettings() {
+  try {
+    const result = await request('/api/admin/telegram/settings');
+    if (loggedIn) document.getElementById('telegram-chat-id').value = result.chatId;
+  } catch (error) {
+    if (error.status === 401) setLoggedIn(false);
+    else { const message = document.getElementById('telegram-message'); message.textContent = error.message; message.className = 'message error'; }
+  }
+}
+
 document.getElementById('login-form').addEventListener('submit', async (event) => {
   event.preventDefault();
   const button = event.submitter ?? event.currentTarget.querySelector('[type="submit"]');
   button.disabled = true;
   const message = document.getElementById('login-message');
   message.textContent = '';
-  try { await post('/api/admin/login', { password: document.getElementById('password').value }); setLoggedIn(true); document.getElementById('password').value = ''; await updateStatus(); }
+  try { await post('/api/admin/login', { password: document.getElementById('password').value }); setLoggedIn(true); document.getElementById('password').value = ''; await Promise.all([updateStatus(), loadTelegramSettings()]); }
   catch (error) { message.textContent = error.message; message.className = 'message error'; }
   finally { button.disabled = false; }
 });
@@ -69,5 +80,25 @@ document.getElementById('number-form').addEventListener('submit', async (event) 
   try { await post('/api/admin/number', { number: document.getElementById('public-number-input').value }); message.textContent = 'Número guardado.'; message.className = 'message success'; await updatePublicQr(); }
   catch (error) { message.textContent = error.message; message.className = 'message error'; }
 });
-request('/api/admin/session').then(async () => { setLoggedIn(true); await updateStatus(); }).catch(() => setLoggedIn(false));
+document.getElementById('telegram-form').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const button = event.submitter ?? event.currentTarget.querySelector('[type="submit"]');
+  const message = document.getElementById('telegram-message');
+  button.disabled = true;
+  message.textContent = 'Comprobando el bot y el chat…';
+  message.className = 'message';
+  try {
+    const tokenInput = document.getElementById('telegram-token');
+    const result = await post('/api/admin/telegram/settings', { chatId: document.getElementById('telegram-chat-id').value, token: tokenInput.value });
+    document.getElementById('telegram-chat-id').value = result.chatId;
+    tokenInput.value = '';
+    message.textContent = 'Configuración guardada.';
+    message.className = 'message success';
+  } catch (error) {
+    if (error.status === 401) setLoggedIn(false);
+    message.textContent = error.message;
+    message.className = 'message error';
+  } finally { button.disabled = false; }
+});
+request('/api/admin/session').then(async () => { setLoggedIn(true); await Promise.all([updateStatus(), loadTelegramSettings()]); }).catch(() => setLoggedIn(false));
 setInterval(() => { if (loggedIn && !document.hidden) void updateStatus(); }, 4_000);

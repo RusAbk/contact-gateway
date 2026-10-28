@@ -5,6 +5,7 @@ import { dirname, join } from 'node:path';
 import Fastify from 'fastify';
 import cookie from '@fastify/cookie';
 import { TelegramNotifier, validateLead } from './telegram.mjs';
+import { TelegramSettingsStore, validTelegramChatId, validTelegramToken } from './telegram-settings.mjs';
 import { WhatsAppManager } from './whatsapp.mjs';
 import { parseRecipientQuery, validateOutboundText } from './recipient.mjs';
 
@@ -27,7 +28,9 @@ if (!/^[a-f0-9]{32}$/.test(salt ?? '') || !/^[a-f0-9]{128}$/.test(expectedHex ??
 const app = Fastify({ logger: true, bodyLimit: 16 * 1024, trustProxy: true });
 await app.register(cookie);
 const whatsapp = new WhatsAppManager(config.dataDir);
-const telegram = new TelegramNotifier(config.botToken, config.botChatId);
+const telegramSettings = new TelegramSettingsStore(config.dataDir, config.botToken, config.botChatId);
+await telegramSettings.load().catch((err) => { app.log.error({ err }, 'Could not load stored Telegram settings; using environment values'); });
+let telegram = new TelegramNotifier(telegramSettings.token, telegramSettings.chatId);
 const limits = new Map();
 const sessions = new Set();
 const sending = new Set();
@@ -123,6 +126,20 @@ app.post('/api/admin/logout', async (request, reply) => {
   return { ok: true };
 });
 app.get('/api/admin/status', async (request, reply) => requireAdmin(request, reply) ? whatsapp.pairingStatus() : undefined);
+app.get('/api/admin/telegram/settings', async (request, reply) => requireAdmin(request, reply) ? { chatId: telegram.chatId, tokenConfigured: true } : undefined);
+app.post('/api/admin/telegram/settings', async (request, reply) => {
+  if (!checkOrigin(request, reply) || !requireAdmin(request, reply)) return;
+  const chatId = typeof request.body?.chatId === 'string' ? request.body.chatId.trim() : '';
+  const enteredToken = typeof request.body?.token === 'string' ? request.body.token.trim() : '';
+  const token = enteredToken || telegram.token;
+  if (!validTelegramChatId(chatId) || !validTelegramToken(token)) return reply.code(422).send({ error: 'Revisa el ID del chat y el token del bot.' });
+  const candidate = new TelegramNotifier(token, chatId);
+  try { await candidate.verifyChat(); }
+  catch (err) { app.log.error({ err }, 'Telegram settings verification failed'); return reply.code(502).send({ error: 'El bot no puede acceder a este chat. Revisa el token, el ID y los permisos.' }); }
+  await telegramSettings.save(token, chatId);
+  telegram = candidate;
+  return { ok: true, chatId };
+});
 app.post('/api/admin/whatsapp/reconnect', async (request, reply) => {
   if (!checkOrigin(request, reply) || !requireAdmin(request, reply)) return;
   await whatsapp.reconnect();
@@ -148,7 +165,9 @@ app.post('/api/admin/whatsapp/lookup', async (request, reply) => {
   if (whatsapp.state !== 'connected') return reply.code(503).send({ error: 'Conecta WhatsApp antes de buscar contactos.' });
   try {
     const target = await whatsapp.resolveRecipient(recipient);
-    return target ? { found: true, name: target.name, number: target.number } : { found: false };
+    if (!target) return { found: false };
+    const avatar = await whatsapp.recipientAvatarDataUrl(target.jid);
+    return { found: true, name: target.name, number: target.number, avatar };
   } catch (error) {
     app.log.error({ err: error }, 'WhatsApp recipient lookup failed');
     return reply.code(502).send({ error: 'No se pudo buscar el contacto en WhatsApp. Inténtalo de nuevo.' });

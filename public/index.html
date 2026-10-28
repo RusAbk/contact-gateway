@@ -51,7 +51,11 @@
             <div id="qr-camera-panel" class="hidden"><video id="qr-video" playsinline muted></video><button id="stop-qr" class="text-button" type="button">Cerrar cámara</button></div>
             <p id="recipient-message" class="message" role="status"></p>
             <form id="outbound-form" class="hidden">
-              <p id="recipient-preview" class="recipient-preview"></p>
+              <div id="recipient-preview" class="recipient-preview">
+                <img id="recipient-avatar" class="recipient-avatar hidden" alt="Foto de perfil de WhatsApp" width="52" height="52">
+                <span id="recipient-avatar-fallback" class="recipient-avatar-fallback" aria-hidden="true">?</span>
+                <div class="recipient-identity"><strong id="recipient-name"></strong><small id="recipient-number"></small></div>
+              </div>
               <label for="outbound-text">Mensaje</label><textarea id="outbound-text" rows="3" maxlength="2000" required placeholder="Escribe tu mensaje..."></textarea>
               <button class="primary-button" type="submit">Enviar por WhatsApp <span>→</span></button>
               <p id="outbound-message" class="message" role="status"></p>

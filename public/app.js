@@ -20,6 +20,7 @@ let chatLoggedIn = false;
 let selectedChat = null;
 let resolvedRecipient = null;
 let qrScanner = null;
+let lookupSerial = 0;
 
 async function request(path, options = {}) {
   let response;
@@ -27,7 +28,8 @@ async function request(path, options = {}) {
   catch { throw new Error('No hay conexión con el servidor. Inténtalo de nuevo.'); }
   if (!response.ok) {
     const result = await response.json().catch(() => null);
-    const error = new Error(result?.error ?? 'No se pudo completar la solicitud.');
+    const detail = typeof result?.error === 'string' ? result.error : `Error del servidor (${response.status}). Inténtalo de nuevo.`;
+    const error = new Error(detail);
     error.status = response.status;
     throw error;
   }
@@ -86,7 +88,7 @@ function setChatAccess(value) {
   chatLoginForm.classList.toggle('hidden', value);
   chatContent.classList.toggle('hidden', !value);
   document.getElementById('chats-count').classList.toggle('hidden', !value);
-  if (!value) { chatList.replaceChildren(); selectedChat = null; resolvedRecipient = null; recipientInput.value = ''; document.getElementById('outbound-text').value = ''; outboundForm.classList.add('hidden'); stopQrCamera(); }
+  if (!value) { lookupSerial++; chatList.replaceChildren(); selectedChat = null; resolvedRecipient = null; recipientInput.value = ''; document.getElementById('outbound-text').value = ''; outboundForm.classList.add('hidden'); stopQrCamera(); }
 }
 
 async function checkChatSession() {
@@ -186,9 +188,10 @@ function stopQrCamera() {
 
 function acceptQr(value) {
   stopQrCamera();
-  recipientInput.value = value;
+  recipientInput.value = typeof value === 'string' ? value.trim() : '';
   recipientInput.dispatchEvent(new Event('input'));
-  recipientForm.requestSubmit();
+  if (recipientInput.value) void lookupRecipient(recipientInput.value);
+  else { recipientMessage.textContent = 'No se pudo leer el contenido del QR.'; recipientMessage.className = 'message error'; }
 }
 
 function privateError(error, messageElement) {
@@ -202,12 +205,28 @@ function privateError(error, messageElement) {
   }
 }
 
-recipientInput.addEventListener('input', () => { resolvedRecipient = null; outboundForm.classList.add('hidden'); recipientMessage.textContent = ''; document.getElementById('outbound-message').textContent = ''; });
-recipientForm.addEventListener('submit', async (event) => {
-  event.preventDefault();
+recipientInput.addEventListener('input', () => { lookupSerial++; recipientForm.querySelector('[type="submit"]').disabled = false; resolvedRecipient = null; outboundForm.classList.add('hidden'); recipientMessage.textContent = ''; document.getElementById('outbound-message').textContent = ''; });
+
+function showRecipient(result) {
+  const name = result.name || 'Nombre no disponible';
+  const number = result.number ? `+${result.number}` : 'WhatsApp';
+  document.getElementById('recipient-name').textContent = name;
+  document.getElementById('recipient-number').textContent = number;
+  const avatar = document.getElementById('recipient-avatar');
+  const fallback = document.getElementById('recipient-avatar-fallback');
+  fallback.textContent = result.name?.slice(0, 1).toUpperCase() || '?';
+  const hasAvatar = typeof result.avatar === 'string' && /^data:image\/(jpeg|png|webp);base64,/.test(result.avatar);
+  avatar.classList.toggle('hidden', !hasAvatar);
+  fallback.classList.toggle('hidden', hasAvatar);
+  avatar.onerror = () => { avatar.classList.add('hidden'); fallback.classList.remove('hidden'); };
+  if (hasAvatar) avatar.src = result.avatar;
+  else avatar.removeAttribute('src');
+}
+
+async function lookupRecipient(query) {
   if (!chatLoggedIn) return;
-  const query = recipientInput.value.trim();
-  const button = event.submitter ?? recipientForm.querySelector('[type="submit"]');
+  const serial = ++lookupSerial;
+  const button = recipientForm.querySelector('[type="submit"]');
   button.disabled = true;
   resolvedRecipient = null;
   outboundForm.classList.add('hidden');
@@ -215,16 +234,19 @@ recipientForm.addEventListener('submit', async (event) => {
   recipientMessage.className = 'message';
   try {
     const result = await post('/api/admin/whatsapp/lookup', { recipient: query });
-    if (recipientInput.value.trim() !== query) return;
+    if (serial !== lookupSerial || recipientInput.value.trim() !== query) return;
     if (!result.found) { recipientMessage.textContent = 'No se encontró este contacto en WhatsApp.'; return; }
     resolvedRecipient = query;
-    const display = result.name || (result.number ? `+${result.number}` : 'Contacto de WhatsApp');
-    document.getElementById('recipient-preview').textContent = `Destinatario: ${display}`;
-    recipientMessage.textContent = 'Contacto encontrado.';
-    recipientMessage.className = 'message success';
+    showRecipient(result);
+    recipientMessage.textContent = '';
     outboundForm.classList.remove('hidden');
-  } catch (error) { privateError(error, recipientMessage); }
-  finally { button.disabled = false; }
+  } catch (error) { if (serial === lookupSerial) privateError(error, recipientMessage); }
+  finally { if (serial === lookupSerial) button.disabled = false; }
+}
+
+recipientForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+  void lookupRecipient(recipientInput.value.trim());
 });
 
 outboundForm.addEventListener('submit', async (event) => {
@@ -247,15 +269,15 @@ outboundForm.addEventListener('submit', async (event) => {
 document.getElementById('scan-qr').addEventListener('click', async () => {
   if (qrScanner) { stopQrCamera(); return; }
   recipientMessage.textContent = '';
+  let accepted = false;
   try {
     const { default: QrScanner } = await import('/qr-scanner.min.js');
-    qrScanner = new QrScanner(document.getElementById('qr-video'), (result) => { if (qrScanner) acceptQr(result.data); }, { preferredCamera: 'environment', returnDetailedScanResult: true });
+    qrScanner = new QrScanner(document.getElementById('qr-video'), (result) => { if (qrScanner) { accepted = true; acceptQr(result?.data ?? result); } }, { preferredCamera: 'environment', returnDetailedScanResult: true });
     document.getElementById('qr-camera-panel').classList.remove('hidden');
     await qrScanner.start();
   } catch {
     stopQrCamera();
-    recipientMessage.textContent = 'No se pudo abrir la cámara. Usa una imagen QR o introduce el número.';
-    recipientMessage.className = 'message error';
+    if (!accepted) { recipientMessage.textContent = 'No se pudo abrir la cámara. Usa una imagen QR o introduce el número.'; recipientMessage.className = 'message error'; }
   }
 });
 document.getElementById('stop-qr').addEventListener('click', stopQrCamera);
@@ -268,7 +290,7 @@ document.getElementById('qr-file').addEventListener('change', async (event) => {
   try {
     const { default: QrScanner } = await import('/qr-scanner.min.js');
     const result = await QrScanner.scanImage(file, { returnDetailedScanResult: true });
-    acceptQr(result.data);
+    acceptQr(result?.data ?? result);
   } catch { recipientMessage.textContent = 'No se encontró un código QR en la imagen.'; recipientMessage.className = 'message error'; }
 });
 document.addEventListener('visibilitychange', () => { if (document.hidden) stopQrCamera(); });

@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import makeWASocket, { DisconnectReason, getBinaryNodeChild, useMultiFileAuthState } from '@whiskeysockets/baileys';
 import pino from 'pino';
 import QRCode from 'qrcode';
-import { ChatIndex, normalizeJid, phoneFromJid } from './chats.mjs';
+import { ChatIndex, normalizeJid, phoneFromJid, usableName } from './chats.mjs';
 
 const logger = pino({ level: 'silent' });
 const pictureHosts = /(^|\.)(whatsapp\.net|whatsapp\.com|fbcdn\.net)$/i;
@@ -133,19 +133,28 @@ export class WhatsAppManager {
     } else {
       let result;
       try {
-        result = await socket.query({ tag: 'iq', attrs: { type: 'get', xmlns: 'w:qr' }, content: [{ tag: 'qr', attrs: { code: recipient.value } }] }, 12_000);
+        result = await socket.query({ tag: 'iq', attrs: { to: 's.whatsapp.net', type: 'get', xmlns: 'w:qr' }, content: [{ tag: 'qr', attrs: { code: recipient.value } }] }, 12_000);
       } catch (error) {
         if (error?.output?.statusCode === 404) return null;
         throw error;
       }
       const qr = getBinaryNodeChild(result, 'qr');
       jid = qr?.attrs?.jid;
-      name = typeof qr?.attrs?.notify === 'string' ? qr.attrs.notify.slice(0, 100) : null;
+      name = usableName(qr?.attrs?.notify, [jid]);
     }
     jid = normalizeJid(jid);
     if (!/^\d+@(s\.whatsapp\.net|lid)$/.test(jid)) return null;
     if (socket !== this.socket || this.state !== 'connected') throw new Error('WhatsApp disconnected during recipient lookup');
-    return { jid, name, number: phoneFromJid(jid) ?? (recipient.type === 'phone' ? recipient.value : null) };
+    return { jid, name: name ?? this.index.contacts.get(this.index.canonical(jid))?.name ?? null, number: phoneFromJid(jid) ?? (recipient.type === 'phone' ? recipient.value : null) };
+  }
+
+  async recipientAvatarDataUrl(jid) {
+    const socket = this.socket;
+    if (this.state !== 'connected' || !socket) return null;
+    const url = await socket.profilePictureUrl(jid, 'preview', 5_000).catch(() => null);
+    if (socket !== this.socket || this.state !== 'connected') return null;
+    const avatar = await this.fetchAvatarBytes(this.safePictureUrl(url), 256 * 1024, 5_000).catch(() => null);
+    return avatar ? `data:${avatar.contentType};base64,${avatar.bytes.toString('base64')}` : null;
   }
 
   async sendToRecipient(recipient, text) {
@@ -179,18 +188,21 @@ export class WhatsAppManager {
   }
 
   async avatarBytes(jid) {
-    const url = await this.avatarUrl(jid);
+    return this.fetchAvatarBytes(await this.avatarUrl(jid));
+  }
+
+  async fetchAvatarBytes(url, maxBytes = 3 * 1024 * 1024, timeoutMs = 8_000) {
     if (!url) return null;
-    const response = await fetch(url, { signal: AbortSignal.timeout(8_000), redirect: 'error' }).catch(() => null);
+    const response = await fetch(url, { signal: AbortSignal.timeout(timeoutMs), redirect: 'error' }).catch(() => null);
     const contentType = String(response?.headers.get('content-type') ?? '').split(';')[0].trim();
     if (!response?.ok || !response.body || !['image/jpeg', 'image/png', 'image/webp'].includes(contentType)) return null;
     const length = Number(response.headers.get('content-length') ?? 0);
-    if (length > 3 * 1024 * 1024) return null;
+    if (length > maxBytes) return null;
     const chunks = [];
     let size = 0;
     for await (const chunk of response.body) {
       size += chunk.length;
-      if (size > 3 * 1024 * 1024) { await response.body.cancel().catch(() => {}); return null; }
+      if (size > maxBytes) { await response.body.cancel().catch(() => {}); return null; }
       chunks.push(chunk);
     }
     return { bytes: Buffer.concat(chunks), contentType };

@@ -40,7 +40,12 @@ h2{font-size:1.4rem;letter-spacing:-.05em;margin:0 0 12px;line-height:1.2}
 .outbound>strong{font-size:.94rem}
 .qr-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:6px}
 .qr-actions .text-button{padding:6px 0}
-.recipient-preview{font-size:.82rem;font-weight:700;color:#397453;margin:10px 0 0}
+.recipient-preview{display:flex;align-items:center;gap:11px;border:1px solid #dfe9e0;background:#f9fbf9;border-radius:14px;padding:10px;margin:12px 0 0}
+.recipient-avatar,.recipient-avatar-fallback{flex:none;width:52px;height:52px;border-radius:50%;object-fit:cover;background:#dbefe2}
+.recipient-avatar-fallback{display:grid;place-items:center;color:#498d65;font-size:1.1rem;font-weight:800}
+.recipient-identity{min-width:0;display:grid;gap:3px}
+.recipient-identity strong{font-size:.88rem;overflow-wrap:anywhere}
+.recipient-identity small{font-size:.76rem;color:#6c8070}
 textarea{display:block;width:100%;background:#f9fbf9;border:1px solid #dfe9e0;border-radius:14px;padding:12px 15px;min-height:96px;resize:vertical;outline:none;color:#1d382d}
 textarea:focus{border-color:#4ca974;box-shadow:0 0 0 3px #dff3e5}
 #qr-camera-panel{margin-top:10px}

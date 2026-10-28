@@ -46,6 +46,27 @@ test('resolves a personal WhatsApp QR link before sending', async () => {
   const recipient = parseRecipientQuery('https://wa.me/qr/ABCD123456');
   assert.deepEqual(await manager.sendToRecipient(recipient, 'Hola Ana'), { jid: '123456789@lid', name: 'Ana', number: null });
   assert.equal(calls[0].attrs.xmlns, 'w:qr');
+  assert.equal(calls[0].attrs.to, 's.whatsapp.net');
   assert.deepEqual(calls[0].content[0], { tag: 'qr', attrs: { code: 'ABCD123456' } });
   assert.deepEqual(calls[1], ['send', '123456789@lid', { text: 'Hola Ana' }]);
+});
+
+test('search result uses a known contact name and a private avatar preview', async () => {
+  const manager = new WhatsAppManager('/unused');
+  manager.state = 'connected';
+  manager.index.acceptContact({ id: '34600123456@s.whatsapp.net', name: 'Ana García' });
+  manager.socket = {
+    onWhatsApp: async () => [{ jid: '34600123456@s.whatsapp.net', exists: true }],
+    profilePictureUrl: async () => 'https://pps.whatsapp.net/avatar',
+  };
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    assert.equal(url, 'https://pps.whatsapp.net/avatar');
+    return new Response(Buffer.from([0xff, 0xd8, 0xff]), { headers: { 'content-type': 'image/jpeg' } });
+  };
+  try {
+    const target = await manager.resolveRecipient(parseRecipientQuery('34600123456'));
+    assert.equal(target.name, 'Ana García');
+    assert.equal(await manager.recipientAvatarDataUrl(target.jid), 'data:image/jpeg;base64,/9j/');
+  } finally { globalThis.fetch = originalFetch; }
 });

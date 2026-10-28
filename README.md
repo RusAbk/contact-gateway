@@ -18,7 +18,7 @@ Update later with:
 sudo bash /opt/contact-gateway/update.sh
 ```
 
-The installation lives in `/opt/contact-gateway`; `.env` and `.github-token` are readable only by root. WhatsApp credentials and the recent-chat index live in `/opt/contact-gateway/data` and survive image updates. The image is built by `.github/workflows/build.yml` on every push to `main`. Wait for the workflow to finish before installing or updating; the installer also waits for the image for the latest commit.
+The installation lives in `/opt/contact-gateway`; `.env` and `.github-token` are readable only by root. WhatsApp credentials, the recent-chat index, and Telegram settings saved through the admin panel live in `/opt/contact-gateway/data` and survive image updates. The image is built by `.github/workflows/build.yml` on every push to `main`. Wait for the workflow to finish before installing or updating; the installer also waits for the image for the latest commit.
 
 ## Use
 
@@ -27,6 +27,7 @@ The installation lives in `/opt/contact-gateway`; `.env` and `.github-token` are
 3. Visitors choose email, phone, or WhatsApp. Email and phone with optional name/company go directly to the configured Telegram chat. WhatsApp visitors scan the public QR and send a message.
 4. On the public page, select WhatsApp. Below the QR, sign in with the administrator password, or use an existing session from `/admin`. Refresh the recent incoming chats there, select a chat, and confirm to send its contact details and avatar to Telegram. A chat with no incoming message cannot be selected.
 5. In the same private area, enter an international phone number or scan a WhatsApp QR code with the camera or an image. The app supports `wa.me/<number>` links and WhatsApp contact QR links such as `wa.me/qr/<code>`. Search for the contact, write a message, and send it from the linked WhatsApp account. Camera scanning requires HTTPS. Searches and outbound sends require an administrator session and are rate limited.
+6. In `/admin`, change the Telegram chat ID and, if needed, the bot token. The current chat ID is shown. The token input is a password field and is left empty to keep the current token; the server never returns it to the browser. New settings are checked with Telegram before they are saved.
 
 The recent-chat index stores a preview and identity metadata, not full message history or media. Unlinking WhatsApp clears this index and the pairing credentials. The public page never exposes private chats or the pairing QR. The container publishes only a localhost port for host Caddy and has no public Docker port.
 
